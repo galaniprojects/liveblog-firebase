@@ -15,6 +15,7 @@ use Drupal\liveblog\Utility\Payload;
 use Drupal\liveblog\Entity\LiveblogPost;
 use Drupal\liveblog\NotificationChannel\NotificationChannelPluginBase;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -43,6 +44,13 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
   protected $client;
 
   /**
+   * The logger.
+   *
+   * @var LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * Constructs an EntityForm object.
    *
    * @param array $configuration
@@ -54,8 +62,15 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+    ConfigFactoryInterface $config_factory,
+    EntityTypeManagerInterface $entity_type_manager
+  ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $config_factory, $entity_type_manager);
+    $this->logger = \Drupal::logger('liveblog_firebase');
   }
 
   /**
@@ -158,37 +173,24 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
     $message->addRecipient(new Topic(self::createTopicId($liveblog_post->getLiveblog())));
     $message->setData($data);
 
-    // @TODO
-    // $response = $client->send($message);
-    // $status = $response->getStatusCode();
-    $status = 200;
+    $status = NULL;
+    $result = NULL;
+    $user_error_msg = t('An error occured while sending the data to the Firecloud Server, please check the admin log for more info.');
 
-    /** @see https://firebase.google.com/docs/cloud-messaging/http-server-ref#error-codes */
-    switch ($status) {
-      // Message was processed successfully. The response body will contain
-      // more details about the message status.
-      case 200:
-        break;
+    try {
+      $response = $client->send($message);
+      $result = $response->getBody()->getContents();
+      $result = json_decode($result);
+    }
+    catch (\Exception $e) {
+      drupal_set_message($user_error_msg, 'error');
+      $this->logger->error($e->getMessage());
+      return;
+    }
 
-      // Indicates that the request could not be parsed as JSON, or it
-      // contained invalid fields.
-      case 400:
-        break;
-
-      // There was an error authenticating the sender account.
-      case 401:
-        break;
-
-      // Indicate that there was an internal error in the FCM connection server
-      // while trying to process the request, or that the server is temporarily
-      // unavailable (for example, because of timeouts).
-      // Sender must retry later, honoring any Retry-After header included in
-      // the response. Application servers must implement exponential back-off.
-      case 500:
-      case 502:
-      case 503:
-      case 504:
-        break;
+    if (isset($result->error)) {
+      $this->logger->error(sprintf('Message ID: %s Error: %s', isset($result->message_id) ? $result->message_id : "-", $result->error));
+      drupal_set_message($user_error_msg, 'error');
     }
   }
 

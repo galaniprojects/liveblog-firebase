@@ -9,8 +9,6 @@ use \Drupal\liveblog_firebase\Plugin\LiveblogNotificationChannel\FirebaseNotific
 use \Drupal\node\Entity\Node;
 use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 
-require_once __DIR__ . '/vendor/autoload.php';
-
 /**
  * Implements hook_ENTITY_TYPE_view().
  */
