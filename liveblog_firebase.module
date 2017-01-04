@@ -1,0 +1,29 @@
+<?php
+/**
+ * @file
+ * The module file.
+ */
+
+use \Drupal\liveblog_firebase\Plugin\LiveblogNotificationChannel\FirebaseNotificationChannel;
+
+use \Drupal\node\Entity\Node;
+use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+/**
+ * Implements hook_ENTITY_TYPE_view().
+ */
+function liveblog_firebase_node_view(array &$build, Node $node, EntityViewDisplayInterface $display, $view_mode) {
+  if ($display->getComponent('liveblog_posts')
+    && Drupal::config('liveblog.settings')->get('notification_channel') == 'liveblog_firebase') {
+
+    $config = Drupal::config('liveblog.notification_channel.liveblog_firebase');
+
+    $build['liveblog_posts']['#attached']['library'][] = 'liveblog_firebase/firebase';
+    $build['liveblog_posts']['#attached']['drupalSettings']['liveblog_firebase'] = [
+      'sender_id' => $config->get('sender_id'),
+      'topic' => FirebaseNotificationChannel::createTopicId($node),
+    ];
+  }
+}

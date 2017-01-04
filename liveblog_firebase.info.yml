@@ -1,0 +1,6 @@
+name: Liveblog Firebase
+description: Provides a liveblog notification channel via Firebase Cloud Messaging.
+type: module
+core: 8.x
+dependencies:
+  - liveblog

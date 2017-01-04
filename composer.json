@@ -1,0 +1,8 @@
+{
+  "name": "drupal/liveblog_firebase",
+  "description": "Firebase Cloud Messaging integration into drupal/liveblog.",
+  "require": {
+    "drupal/liveblog": "8.x-1.x-dev",
+    "sngrl/php-firebase-cloud-messaging": "dev-master"
+  }
+}
