@@ -30,6 +30,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class FirebaseNotificationChannel extends NotificationChannelPluginBase {
 
   /**
+   * The plugin id which is set in liveblog.settings.notification_channel.
+   */
+  const PLUGIN_ID = 'liveblog_firebase';
+
+  /**
    * Maximum allowed payload size.
    *
    * @see https://firebase.google.com/docs/cloud-messaging/concept-options
@@ -164,20 +169,21 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
    * {@inheritdoc}
    */
   public function triggerLiveblogPostEvent(LiveblogPost $liveblog_post, $event) {
-    $client = $this->getClient();
-    $data = Payload::create($liveblog_post)->getRenderedPayload();
+    $message = $this->createMessage($liveblog_post, $event);
+    $size = $this->estimateMessageSize($message);
 
-    $message = new Message();
-    $message->setPriority('high');
-    $message->setTimeToLive(0);
-    $message->addRecipient(new Topic(self::createTopicId($liveblog_post->getLiveblog())));
-    $message->setData($data);
+    if ($size > self::FCM_DATA_LIMIT) {
+      $error_msg = sprintf("Payload is to big: %d bytes (maximum of %d bytes allowed)", $size, self::FCM_DATA_LIMIT);
+      drupal_set_message($error_msg, 'error');
+      return;
+    }
 
     $status = NULL;
     $result = NULL;
     $user_error_msg = t('An error occured while sending the data to the Firecloud Server, please check the admin log for more info.');
 
     try {
+      $client = $this->getClient();
       $response = $client->send($message);
       $result = $response->getBody()->getContents();
       $result = json_decode($result);
@@ -198,12 +204,12 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
    * {@inheritdoc}
    */
   public function validateLiveblogPostForm(array &$form, FormStateInterface $form_state, LiveblogPost $liveblog_post) {
-    $data = Payload::create($liveblog_post)->getRenderedPayload();
-    // Add margin for missing id since the entity is not saved yet.
-    $size = strlen(json_encode($data)) + 11;
+    $message = $this->createMessage($liveblog_post, 'edit');
+    $size = $this->estimateMessageSize($message);
 
     if ($size > self::FCM_DATA_LIMIT) {
-      $form_state->setErrorByName('data', sprintf("Payload is to big: %d bytes (maximum of %d bytes allowed)", $size, self::FCM_DATA_LIMIT));
+      $error_msg = sprintf("Payload is to big: %d bytes (maximum of %d bytes allowed)", $size, self::FCM_DATA_LIMIT);
+      $form_state->setErrorByName('data', $error_msg);
     }
   }
 
@@ -218,6 +224,57 @@ class FirebaseNotificationChannel extends NotificationChannelPluginBase {
    */
   public static function createTopicId(NodeInterface $liveblog) {
     return "liveblog-{$liveblog->id()}";
+  }
+
+  /**
+   * Creates the message object which will be sent to the FCM server.
+   *
+   * @param LiveblogPost $liveblog_post
+   *    The live blog post.
+   * @param string $event
+   *    The event type, e.g.: `edit`, `add`.
+   *
+   * @return Message
+   *    The message object.
+   */
+  protected function createMessage(LiveblogPost $liveblog_post, $event) {
+    $topic_id = self::createTopicId($liveblog_post->getLiveblog());
+
+    $data = Payload::create($liveblog_post)->getRenderedPayload();
+    $data['event'] = $event;
+    $data['topic_id'] = $topic_id;
+
+    $message = new Message();
+    $message->setPriority('high');
+    $message->setTimeToLive(0);
+    $message->addRecipient(new Topic($topic_id));
+    $message->setData($data);
+
+    return $message;
+  }
+
+  /**
+   * Gets the estimated size for the message.
+   *
+   * @param Message $message
+   *    The data message.
+   *
+   * @return int
+   *    The estimated size of the message.
+   */
+  protected function estimateMessageSize(Message $message) {
+    $data = [
+      'headers' => [
+        'Authorization' => sprintf('key=%s', $this->getConfigurationValue('server_key')),
+        'Content-Type' => 'application/json',
+      ],
+      'body' => json_encode($message),
+    ];
+
+    // Add margin for id.
+    $size = strlen(json_encode($data)) + 11;
+
+    return $size;
   }
 
 }

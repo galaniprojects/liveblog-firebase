@@ -1,8 +1,8 @@
 firebase:
   title: 'Firebase library'
   js:
-    https://www.gstatic.com/firebasejs/3.5.2/firebase-app.js { type: external, minified: true}
-    https://www.gstatic.com/firebasejs/3.5.2/firebase-messaging.js { type: external, minified: true}
+    https://www.gstatic.com/firebasejs/3.5.2/firebase-app.js: { type: external, minified: true}
+    https://www.gstatic.com/firebasejs/3.5.2/firebase-messaging.js: { type: external, minified: true}
     js/liveblog_firebase.js: {}
   dependencies:
     - core/drupalSettings

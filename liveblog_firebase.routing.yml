@@ -1,0 +1,27 @@
+liveblog_firebase.manifest:
+  path: '/liveblog_firebase/manifest.json'
+  defaults:
+    _controller: '\Drupal\liveblog_firebase\Controller\FirebaseController::manifest'
+  requirements:
+    _access: 'TRUE'
+
+liveblog_firebase.service_worker:
+  path: '/liveblog_firebase/firebase-messaging-sw.js'
+  defaults:
+    _controller: '\Drupal\liveblog_firebase\Controller\FirebaseController::serviceWorker'
+  requirements:
+    _access: 'TRUE'
+
+liveblog_firebase.subscribe:
+  path: '/liveblog_firebase/subscribe/{token}/{topic}'
+  defaults:
+    _controller: '\Drupal\liveblog_firebase\Controller\FirebaseController::subscribe'
+  requirements:
+    _access: 'TRUE'
+
+liveblog_firebase.unsubscribe:
+  path: '/liveblog_firebase/unsubscribe/{token}/{topic}'
+  defaults:
+    _controller: '\Drupal\liveblog_firebase\Controller\FirebaseController::unsubscribe'
+  requirements:
+    _access: 'TRUE'

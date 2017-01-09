@@ -1,0 +1,8 @@
+{
+  "short_name": "LiveblogFirebase",
+  "name": "Liveblog Firebase",
+
+  "//": "Needed to enable push notifications for some browsers.",
+  "//": "This is a fixed value, common among all FCM JavaScript clients",
+  "gcm_sender_id": "103953800507"
+}

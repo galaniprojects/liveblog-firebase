@@ -7,6 +7,7 @@
 use \Drupal\liveblog_firebase\Plugin\LiveblogNotificationChannel\FirebaseNotificationChannel;
 
 use \Drupal\node\Entity\Node;
+use \Drupal\Core\Url;
 use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 
 /**
@@ -14,7 +15,7 @@ use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
  */
 function liveblog_firebase_node_view(array &$build, Node $node, EntityViewDisplayInterface $display, $view_mode) {
   if ($display->getComponent('liveblog_posts')
-    && Drupal::config('liveblog.settings')->get('notification_channel') == 'liveblog_firebase') {
+    && Drupal::config('liveblog.settings')->get('notification_channel') == FirebaseNotificationChannel::PLUGIN_ID) {
 
     $config = Drupal::config('liveblog.notification_channel.liveblog_firebase');
 
@@ -22,6 +23,17 @@ function liveblog_firebase_node_view(array &$build, Node $node, EntityViewDispla
     $build['liveblog_posts']['#attached']['drupalSettings']['liveblog_firebase'] = [
       'sender_id' => $config->get('sender_id'),
       'topic' => FirebaseNotificationChannel::createTopicId($node),
+      'sw_file' => '/liveblog_firebase/firebase-messaging-sw.js',
     ];
+
+    // Inject manifest.
+    $build['#attached']['html_head_link'][] = array(
+      array(
+        'rel' => 'manifest',
+        'href' => "/" . Url::fromRoute('liveblog_firebase.manifest')->getInternalPath(),
+      ),
+      // Add header.
+      FALSE,
+    );
   }
 }
